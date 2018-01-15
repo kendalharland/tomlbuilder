@@ -1,9 +1,10 @@
-// Package tomlbuilder is a package for programmatically constructing TOML files
+// Package tomlbuilder is a package for programmatically building TOML files
 package tomlbuilder
 
 import (
 	"bytes"
 	"fmt"
+	"strconv"
 )
 
 // TomlBuilder is used to create TOML files.
@@ -13,10 +14,10 @@ import (
 // * Integer
 // * Float
 // * Boolean
-// X Offset Date-time
-// X Local Date-time
-// X Local Date
-// X Local Time
+// [TODO] Offset Date-time
+// [TODO] Local Date-time
+// [TODO] Local Date
+// [TODO] Local Time
 // * Array
 // * Table
 // * Inline Table
@@ -40,7 +41,7 @@ import (
 //       [[fruit.variety]]
 //       name = "red delicious"
 //
-//       # This table conflicts with the previous table
+//       # This table conflicts with the previous table array
 //       [fruit.variety]
 //       name = "granny smith"
 //
@@ -61,66 +62,96 @@ func New() *TomlBuilder {
 	}
 }
 
-// WriteIntArray(key string, array ...int)
-// WriteFloatArray(key string, array ...float64)
-
-// WriteNewLine adds a new line to the builder.
-func (w *TomlBuilder) WriteNewLine() {
+// AddNewLine adds a new line to the builder.
+func (w *TomlBuilder) AddNewLine() {
 	w.write("\n")
 }
 
-// WriteComment adds a comment to the builder.
-func (w *TomlBuilder) WriteComment(msg string) {
+// AddComment adds a comment to the builder.
+func (w *TomlBuilder) AddComment(msg string) {
 	w.write("# %v", msg)
 }
 
-// WriteString adds a string key-value pair to the builder
-func (w *TomlBuilder) WriteString(key string, value string) {
+// AddString adds a string key-value pair to the builder.
+func (w *TomlBuilder) AddString(key string, value string) {
 	w.write("%v = \"%v\"\n", key, value)
 }
 
-// WriteInt adds an integer key-value pair to the builder
-func (w *TomlBuilder) WriteInt(key string, value int) {
+// AddInt adds an integer key-value pair to the builder.
+func (w *TomlBuilder) AddInt(key string, value int) {
 	w.write("%v = %v\n", key, value)
 }
 
-// WriteFloat adds a float key-value pair to the builder
-func (w *TomlBuilder) WriteFloat(key string, value float64) {
-	w.write("%v = %v\n", key, value)
+// AddFloat adds a float key-value pair to the builder.
+func (w *TomlBuilder) AddFloat(key string, value float64) {
+	w.write("%v = %v\n", key, formatFloat(value))
 }
 
-// WriteStringArray adds a string array key-value pair to the builder
-func (w *TomlBuilder) WriteStringArray(key string, array ...string) {
+func (w *TomlBuilder) AddBool(key string, value bool) {
+	w.write("%v = %v\n", key, strconv.FormatBool(value))
+}
+
+// AddStringArray adds an array of strings to the builder.
+func (w *TomlBuilder) AddStringArray(key string, array ...string) {
+	vals := make([]string, len(array))
+	for i, val := range array {
+		vals[i] = fmt.Sprintf("\"%v\"", string(val))
+	}
+	w.addArray(key, vals)
+}
+
+// AddIntArray adds an array of ints to the builder.
+func (w *TomlBuilder) AddIntArray(key string, array ...int) {
+	vals := make([]string, len(array))
+	for i, val := range array {
+		vals[i] = fmt.Sprintf("%d", val)
+	}
+	w.addArray(key, vals)
+}
+
+// AddFloatArray adds an array of floats to the builder.
+func (w *TomlBuilder) AddFloatArray(key string, array ...float64) {
+	vals := make([]string, len(array))
+	for i, val := range array {
+		vals[i] = formatFloat(val)
+	}
+	w.addArray(key, vals)
+}
+
+func (w *TomlBuilder) AddBoolArray(key string, array ...bool) {
+	vals := make([]string, len(array))
+	for i, val := range array {
+		vals[i] = strconv.FormatBool(val)
+	}
+	w.addArray(key, vals)
+}
+
+func (w *TomlBuilder) addArray(key string, array []string) {
 	w.write("%v = [\n", key)
 	w.indent()
 	for _, val := range array {
-		w.write("\"%v\",\n", val)
+		w.write("%v,\n", val)
 	}
 	w.unindent()
 	w.write("]\n")
 }
 
-// WriteArrayOfTables adds an array of tables to the builder.  name is the name
-// of the array, while the write callback is used to build the contents of the
-// array.
-//
-// Example:
-//
-//   builder.WriteArrayOfTables("foo", func(b *TomlBuilder) {
-//       b.WriteString("bar", "baz")
-//       b.WriteInt("bang", 1)
-//   })
-//   println(builder.String())
-//
-// Outputs:
-//
-//   [[foo]]
-//   bar = "baz"
-//   bang = 1
-//
-// FIXME: Move this to an actual example.
-func (w *TomlBuilder) WriteArrayOfTables(name string,
-	write func(*TomlBuilder)) {
+// AddFloatArray(key string, array ...float64)
+
+// AddTable adds a table to the builder.
+func (w *TomlBuilder) AddTable(name string, write func(*TomlBuilder)) {
+	w.write("[%v]\n", name)
+	write(&TomlBuilder{
+		IndentSize: w.IndentSize,
+
+		indentation: w.indentation,
+		buf:         w.buf,
+	})
+}
+
+// AddArrayOfTables adds an array of tables to the builder.  name is the name of
+// the array.  write is the callback used to build the contents of the array.
+func (w *TomlBuilder) AddArrayOfTables(name string, write func(*TomlBuilder)) {
 	w.write("[[%v]]\n", name)
 	write(&TomlBuilder{
 		IndentSize: w.IndentSize,
@@ -153,4 +184,11 @@ func (w *TomlBuilder) unindent() {
 	}
 
 	w.indentation = w.indentation[:len(w.indentation)-w.IndentSize]
+}
+
+func formatFloat(val float64) string {
+	if val == float64(int64(val)) {
+		return fmt.Sprintf("%v.0", val)
+	}
+	return fmt.Sprintf("%v", strconv.FormatFloat(val, 'f', -1, 64))
 }
