@@ -1,7 +1,7 @@
 # tomlbuilder
 [![GoDoc](https://godoc.org/github.com/kharland/tomlbuilder?status.svg)](https://godoc.org/github.com/kharland/tomlbuilder)
 
-A go package for programmatically building TOML files
+A go package for programatically building TOML files
 
 ## Usage
 A TomlBuilder object is used to buffer the contents of a TOML file. Values
