@@ -1,4 +1,6 @@
 # tomlbuilder
+[![GoDoc](https://godoc.org/github.com/kharland/tomlbuilder?status.svg)](https://godoc.org/github.com/kharland/tomlbuilder)
+
 A go package for programmatically building TOML files
 
 ## Usage
