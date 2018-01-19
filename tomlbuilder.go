@@ -136,8 +136,6 @@ func (w *TomlBuilder) addArray(key string, array []string) {
 	w.write("]\n")
 }
 
-// AddFloatArray(key string, array ...float64)
-
 // AddTable adds a table to the builder.
 func (w *TomlBuilder) AddTable(name string, write func(*TomlBuilder)) {
 	w.write("[%v]\n", name)
